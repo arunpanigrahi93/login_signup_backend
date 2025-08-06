@@ -18,6 +18,19 @@ app.post("/signup", async (req, res) => {
   }
 });
 
+app.get("/user", async (req, res) => {
+  try {
+    const user = await User.find({ emailId: req.body.emailId });
+    if (!user) {
+      res.send("No user found");
+    } else {
+      res.send(user);
+    }
+  } catch (err) {
+    res.status(400).send("something went wrong");
+  }
+});
+
 app.get("/feed", async (req, res) => {
   try {
     const users = await User.find({});
