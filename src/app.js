@@ -1,28 +1,27 @@
 const express = require("express");
+const userAuth = require("./middleware/auth");
+const connectDb = require("./config/datbase");
 
 const app = express();
 const port = 9999;
 
-// get
-app.get("/user", (req, res) => {
-  res.send({ firstName: "Arun", lastName: "Kumar" });
+app.use("/user", userAuth);
+
+app.get("/user/alldata", (req, res) => {
+  res.send("Get all the data");
 });
 
-//post
-app.post("/user", (req, res) => {
-  res.send("Data saved successfully in database");
+app.delete("/user/userData", (req, res) => {
+  res.send("deleted user");
 });
 
-//patch
-app.patch("/user", (req, res) => {
-  res.send("Data updated successfully");
-});
-
-//delete
-app.delete("/user", (req, res) => {
-  res.send("user deleted successfully");
-});
-
-app.listen(9999, () => {
-  console.log("server running on port number : " + port);
-});
+connectDb()
+  .then(() => {
+    console.log("Db connected");
+    app.listen(port, () => {
+      console.log("server running on port :" + port);
+    });
+  })
+  .catch((err) => {
+    "Db not connected";
+  });
