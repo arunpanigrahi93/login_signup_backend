@@ -1,18 +1,21 @@
 const express = require("express");
 const userAuth = require("./middleware/auth");
 const connectDb = require("./config/datbase");
+const User = require("./model/user");
 
 const app = express();
 const port = 9999;
+app.use(express.json());
 
-app.use("/user", userAuth);
+app.post("/signup", async (req, res) => {
+  const user = new User(req.body);
 
-app.get("/user/alldata", (req, res) => {
-  res.send("Get all the data");
-});
-
-app.delete("/user/userData", (req, res) => {
-  res.send("deleted user");
+  try {
+    await user.save();
+    res.send("User added sucessfully");
+  } catch (err) {
+    res.status(400).send("Error saving the user :" + err.message);
+  }
 });
 
 connectDb()
