@@ -1,20 +1,30 @@
 const express = require("express");
-const userAuth = require("./middleware/auth");
 const connectDb = require("./config/datbase");
 const User = require("./model/user");
 const validateSignUpData = require("./helper/validation");
 const bcrypt = require("bcrypt");
+const cookieParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
+const userAuth = require("./middleware/auth");
+const cors = require("cors");
 
 const app = express();
 const port = 9999;
 app.use(express.json());
+app.use(cookieParser());
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
 
 app.post("/signup", async (req, res) => {
   try {
     //validate the data
 
     validateSignUpData(req);
-    const { firstName, lastName, emailId, password } = req.body;
+    const { firstName, lastName, emailId, password, photoUrl } = req.body;
 
     //encrypt the password
     const passwordHash = await bcrypt.hash(password, 10);
@@ -24,6 +34,7 @@ app.post("/signup", async (req, res) => {
       firstName,
       lastName,
       emailId,
+      photoUrl,
       password: passwordHash,
     });
 
@@ -47,7 +58,15 @@ app.post("/login", async (req, res) => {
     // password check
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (isPasswordValid) {
-      res.send("Login successful");
+      //create a jwt token
+
+      const token = await jwt.sign({ _id: user._id }, "DEV$Tinder$790");
+
+      //Add token to cookie and send the response back to the user
+
+      res.cookie("token", token);
+
+      res.send(user);
     } else {
       throw new Error("Invalid credentials");
     }
@@ -56,6 +75,21 @@ app.post("/login", async (req, res) => {
   }
 });
 
+app.post("/logout", async (req, res) => {
+  res.cookie("token", null, {
+    expires: new Date(Date.now()),
+  });
+  res.send("logged off");
+});
+
+app.get("/profile", userAuth, async (req, res) => {
+  try {
+    const user = req.user;
+    res.send(user);
+  } catch (err) {
+    res.status(400).send("ERROR:" + err.message);
+  }
+});
 app.get("/user", async (req, res) => {
   try {
     const user = await User.find({ emailId: req.body.emailId });
@@ -69,40 +103,40 @@ app.get("/user", async (req, res) => {
   }
 });
 
-app.get("/feed", async (req, res) => {
-  try {
-    const users = await User.find({});
+// app.get("/feed", async (req, res) => {
+//   try {
+//     const users = await User.find({});
 
-    if (users.length === 0) {
-      res.send("No users found");
-    } else {
-      res.send(users);
-    }
-  } catch (err) {
-    res.status(400).send("Something went wrong");
-  }
-});
+//     if (users.length === 0) {
+//       res.send("No users found");
+//     } else {
+//       res.send(users);
+//     }
+//   } catch (err) {
+//     res.status(400).send("Something went wrong");
+//   }
+// });
 
-app.patch("/user/:userId", async (req, res) => {
-  const userId = req.params?.userId;
-  const data = req.body;
-  try {
-    const ALLOWED_UPDATES = ["photoUrl", "about", "gender", "age", "skills"];
-    const isUpdateAllowed = Object.keys(data).every((k) =>
-      ALLOWED_UPDATES.includes(k)
-    );
-    if (!isUpdateAllowed) {
-      throw new Error("Update not allowed");
-    }
+// app.patch("/user/:userId", async (req, res) => {
+//   try {
+//     const userId = req.params?.userId;
+//     const data = req.body;
+//     const ALLOWED_UPDATES = ["photoUrl", "about", "gender", "age", "skills"];
+//     const isUpdateAllowed = Object.keys(data).every((k) =>
+//       ALLOWED_UPDATES.includes(k)
+//     );
+//     if (!isUpdateAllowed) {
+//       throw new Error("Update not allowed");
+//     }
 
-    await User.findByIdAndUpdate({ _id: userId }, data, {
-      runValidators: true,
-    });
-    res.send("updated successfully");
-  } catch (err) {
-    res.status(400).send("update failed" + err.message);
-  }
-});
+//     await User.findByIdAndUpdate({ _id: userId }, data, {
+//       runValidators: true,
+//     });
+//     res.send("updated successfully");
+//   } catch (err) {
+//     res.status(400).send("update failed" + err.message);
+//   }
+// });
 
 connectDb()
   .then(() => {

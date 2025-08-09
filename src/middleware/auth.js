@@ -1,15 +1,24 @@
-const userAuth = (req, res, next) => {
-  try {
-    const token = "xyaz";
-    const isAuth = token === "xyz";
+const jwt = require("jsonwebtoken");
+const User = require("../model/user");
 
-    if (!isAuth) {
-      res.send("Unauthorized");
-    } else {
-      next();
+const userAuth = async (req, res, next) => {
+  try {
+    const { token } = req.cookies;
+    if (!token) {
+      res.status(401).send("Please login");
     }
+    const decodedObj = await jwt.verify(token, "DEV$Tinder$790");
+
+    const { _id } = decodedObj;
+    const user = await User.findById(_id);
+
+    if (!user) {
+      throw new Error("user not found");
+    }
+    req.user = user;
+    next();
   } catch (err) {
-    console.log(err.message);
+    res.status(400).send("ERROR :" + err.message);
   }
 };
 
